@@ -1,0 +1,99 @@
+/* Design tokens and components — house style.
+   Inline this whole file into the Artifact's <style>.
+   Single light theme by choice: no dark mode, no second accent. */
+:root{
+  --bg:#FBF9F6;        /* warm off-white ground, not pure white */
+  --surface:#ffffff;
+  --ink:#2f2b2a;       /* warm near-black, not pure black */
+  --ink-2:#3a3a3a;
+  --mut:#6E6E6E;
+  --line:#ece5df;
+  --coral:#E8857F;     /* the only accent */
+  --coral-l:#F2BEBF;
+  --maroon:#7A3F40;    /* headings and selected state */
+  --blue:#6B7FA3;
+  --taupe:#D8D2C8;
+  --taupe-d:#b5aca0;
+  --gold:#C9A45C;
+  --sage:#BCC6AE;
+  --radius:16px;
+  --shadow:0 14px 30px rgba(0,0,0,.09);
+  --wrap:1080px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:'Raleway',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-weight:500;line-height:1.55;-webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:var(--wrap);margin:0 auto;padding:0 24px}
+code{overflow-wrap:anywhere}
+code,pre{font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace}
+
+/* ---------- Typography ---------- */
+.eyebrow{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+h1{font-size:clamp(30px,5vw,42px);font-weight:900;line-height:1.06;margin:.28em 0 .1em;letter-spacing:-.01em;text-wrap:balance;color:var(--ink)}
+h2{font-size:26px;font-weight:800;margin:0 0 4px;letter-spacing:-.01em;text-wrap:balance;color:var(--maroon)}
+h3{font-size:16px;font-weight:800;margin:0 0 10px}
+.lead{font-size:17px;color:var(--mut);max-width:62ch;font-weight:500}
+p{max-width:70ch}
+.tagchip{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--maroon);background:#fbe6e2;border:1px solid var(--coral-l);border-radius:999px;padding:5px 12px}
+
+/* ---------- Page skeleton ---------- */
+header.hero{padding:64px 0 40px;border-bottom:1px solid var(--line)}
+.meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.meta b{font-size:12px;font-weight:800;letter-spacing:.04em;color:var(--ink-2);background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 12px}
+section.block{padding:52px 0;border-bottom:1px solid var(--line)}
+.section-label{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:0 0 20px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:26px}
+
+/* ---------- Card: 4px left accent rail, coloured per card via --ac ---------- */
+.cards{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;margin-top:6px}
+.card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:22px 22px 20px;overflow:hidden;transition:.16s}
+.card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--ac,var(--coral))}
+.card:hover{border-color:var(--ac,var(--coral));transform:translateY(-3px);box-shadow:var(--shadow)}
+.card .cr{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ac,var(--coral));opacity:.75}
+.card .ct{font-size:22px;font-weight:800;margin:4px 0 6px;color:var(--ink)}
+.card .cd{color:var(--mut);font-size:13px;line-height:1.45}
+.card .cgo{margin-top:14px;font-weight:800;font-size:13.5px;color:var(--ac,var(--coral))}
+
+/* ---------- KPI ---------- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.kpi .k-label{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+.kpi .k-val{font-size:28px;font-weight:900;letter-spacing:-.02em;margin-top:6px;font-variant-numeric:tabular-nums}
+.kpi .k-sub{font-size:12px;color:var(--mut);margin-top:3px}
+.kpi .k-sub.up{color:#5a8a5a}.kpi .k-sub.down{color:#b5524d}
+
+/* ---------- Badges, chips, buttons ---------- */
+.badges{display:flex;gap:10px;flex-wrap:wrap}
+.badge{font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#fff;border-radius:999px;padding:6px 14px;background:var(--taupe-d)}
+.badge.locked{background:var(--maroon)}.badge.done{background:#5a8a5a}.badge.wip{background:var(--gold)}.badge.todo{background:var(--taupe-d)}.badge.risk{background:#b5524d}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font-size:12.5px;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--ink-2);border-radius:999px;padding:6px 13px}
+.chip.on{background:var(--maroon);border-color:var(--maroon);color:#fff}
+.btn{font-family:inherit;font-size:13.5px;font-weight:800;border-radius:9px;padding:9px 16px;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--ink-2)}
+.btn.pri{background:var(--coral);border-color:var(--coral);color:#fff}
+
+/* ---------- Tables, lists, code ---------- */
+.scroll{overflow-x:auto}
+.tokentable{width:100%;border-collapse:collapse;font-size:13px}
+.tokentable th,.tokentable td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.tokentable th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);white-space:nowrap}
+.tokentable td code{background:#f3ede6;border-radius:5px;padding:1px 6px;font-size:12px}
+/* Tables with 4+ columns should scroll on narrow screens rather than
+   squeeze every column down to a few characters wide. */
+.tokentable:has(tr:first-child > :nth-child(4)){min-width:640px}
+
+ul.tips{margin:6px 0 0;padding-left:18px}
+ul.tips li{margin:7px 0;color:var(--ink-2);font-size:14px}
+pre{background:#2f2b2a;color:#f3ede6;border-radius:12px;padding:18px 20px;overflow-x:auto;font-size:12.5px;line-height:1.6;margin:14px 0 0}
+pre .c{color:#b5aca0}
+a{color:var(--coral);font-weight:700;text-decoration:none}a:hover{text-decoration:underline}
+svg{max-width:100%;height:auto}
+footer{padding:40px 0 60px;color:var(--mut);font-size:13px;line-height:1.7}
+
+@media(max-width:760px){.cards,.two{grid-template-columns:minmax(0,1fr)}.cards{gap:14px}header.hero{padding:44px 0 30px}section.block{padding:38px 0}}
