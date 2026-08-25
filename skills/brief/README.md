@@ -2,10 +2,31 @@
 
 > Turn the current conversation into a project brief a colleague can read.
 
-Claude Code already has [`handoff`](https://www.aihero.dev/skills-handoff): it
-compacts a session into a document so the **next agent** can pick the work up.
-`brief` is the other half — it compacts the same session for a **person**, and
-publishes it as a web page you can drop in a channel.
+## Your best thinking is sitting in a terminal nobody will ever read.
+
+You just spent two hours deciding something. You weighed five approaches, killed
+four, and you know exactly why. Then a teammate asks what you're building — and
+you start improvising. Badly.
+
+So you ask an agent to write it up, and you get the genre: four paragraphs on why
+the file lives where it lives, a confident metric counting its own edits, a
+"risks" section that's the previous section wearing a hat. Nobody reads that
+either.
+
+[`handoff`](https://www.aihero.dev/skills-handoff) compacts a session for the
+next agent. **`brief` compacts it for the humans** — and it's under standing
+orders to shut up about itself.
+
+One command, one link: the goal, the route you picked, the four you didn't, and
+the honest cost of the one that won. It opens with a single word — **Locked**,
+**Exploring**, **Undecided** — because that's what your reader needs before they
+decide anything else.
+
+Every decision has to pass one test: *you could reasonably have chosen
+otherwise, and knowing why changes what the reader does.* Three or four survive
+it. Ten means you wrote working notes and called them a brief.
+
+Stop re-explaining it. Send the link.
 
 ## Why not just reuse `handoff`
 
