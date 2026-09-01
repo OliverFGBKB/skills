@@ -59,9 +59,18 @@ Session context can hold API keys, passwords, tokens, internal URLs and PII. Pub
 
 ## Render
 
-- Load the `artifact-design` skill first — required before writing any artifact. Load `artifact-diagramming` too if the page earns a diagram.
+- Load the `artifact-design` skill first — required before writing any artifact. Load `artifact-diagramming` too if the page earns a diagram. If either skill is not installed in this environment, skip it and rely on the skeleton and [style.css](./style.css) below; do not abort.
 - Inline [style.css](./style.css) verbatim into `<style>`, and pull Raleway via `<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800;900&display=swap">` (Google Fonts is the one host the Artifact CSP allows).
 - Use the house skeleton: `header.hero` (eyebrow + h1 + `.lead` + `.meta` chips), then one `section.block` per section, each opening with a `.section-label` (name the section — do not number it; a brief is jumped into, not read as a sequence), closing with a `footer`.
 - **Single light theme.** This is a deliberate commitment — warm off-white ground, coral as the only accent, no dark mode, no second high-saturation colour competing for attention. Skip the `prefers-color-scheme` blocks; `body` is already explicitly painted.
 - Wrap tables and diagrams in `.scroll`. The page itself never scrolls horizontally.
 - Write the file to the scratchpad directory, publish with the `Artifact` tool (favicon `📋`), and give the user the link.
+
+### Fallback: no `Artifact` tool
+
+If the `Artifact` tool is unavailable in this environment, do not abort and do not fall back to Markdown — the page is the deliverable. Write the same self-contained HTML to a local file instead:
+
+- Path: `./brief-<slug>-<YYYYMMDD>.html` in the current working directory, where `<slug>` is a few words from the goal. If the cwd is not writable, use the system temp directory.
+- Self-contained is now mandatory, not just tidy: CSS inlined in `<style>`, no build step, no local asset references. The Google Fonts `<link>` stays — it degrades to a system font offline, which is acceptable.
+- Report the absolute path, and tell the user it opens in a browser (`open <path>` on macOS). Do not claim it was published.
+- Everything else — sections, language, voice, cut and redact rules — is unchanged.

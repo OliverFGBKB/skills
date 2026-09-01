@@ -1,9 +1,11 @@
 # skills
 
-Personal [Claude Code](https://claude.com/claude-code) skills.
+Personal agent skills. Written first for [Claude Code](https://claude.com/claude-code),
+but they degrade gracefully in any agent that reads `SKILL.md` — no `Artifact` tool,
+no companion skills, still works.
 
 A skill is a directory containing a `SKILL.md`: YAML frontmatter with a name and
-description, and a markdown body Claude follows when the skill is invoked. These
+description, and a markdown body the agent follows when the skill is invoked. These
 are mine — opinionated, small, and written to be read rather than configured.
 
 ## Skills
@@ -30,6 +32,15 @@ freshly copied skill is not callable until then. Then invoke it by name:
 
 For a project-scoped install, copy into `.claude/skills/` inside the repo
 instead, and commit it so teammates get it on their next pull.
+
+If you run several agents, symlink instead of copying so there is one source of
+truth and an edit lands everywhere at once:
+
+```bash
+for dir in ~/.claude/skills ~/.agents/skills ~/.config/opencode/skills; do
+  [ -d "$dir" ] && ln -sfn "$PWD/skills/brief" "$dir/brief"
+done
+```
 
 If you use the [`skills` CLI](https://www.npmjs.com/package/skills), this repo
 follows the conventional `skills/<name>/` layout:
