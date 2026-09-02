@@ -1,0 +1,227 @@
+#!/usr/bin/env python3
+"""skill-doctor — 一处看清所有 agent skill 的归属、分发与归档状态。
+
+结构假设（hub-and-spoke）：
+
+    ~/.agents/skills/            hub。所有 skill 唯一的分发点
+    ~/.claude/skills          →  整目录符号链接到 hub
+    ~/.config/opencode/skills →  整目录符号链接到 hub
+    pi                        →  原生读 hub
+
+hub 里每个条目的形态直接决定它属于哪一层，不需要额外维护清单：
+
+    真实目录 + 在 .skill-lock.json     → 第三方（npx skills 管，不用备份）
+    符号链接 → skills-private          → 自创私密（本地 git）
+    符号链接 → Projects/skills         → 自创共享（public GitHub）
+    真实目录 + 不在 lock 文件          → 待归类（多半是刚用自然语言装的）
+
+「待归类」是这个工具存在的主要理由：在任意 agent 里用自然语言装 skill，
+东西会以真实目录落进 hub，此时无法与自创 skill 区分。跑一次看一眼即可。
+"""
+
+import json
+import os
+import subprocess
+import sys
+
+HOME = os.path.expanduser("~")
+HUB = os.path.join(HOME, ".agents", "skills")
+LOCK = os.path.join(HOME, ".agents", ".skill-lock.json")
+CONSUMERS = [
+    ("cc", os.path.join(HOME, ".claude", "skills")),
+    ("oc", os.path.join(HOME, ".config", "opencode", "skills")),
+]
+ARCHIVES = [
+    ("私密", os.path.join(HOME, ".agents", "skills-private")),
+    ("公开", os.path.join(HOME, "Documents", "Projects", "skills")),
+]
+
+C = {
+    "dim": "\033[2m", "red": "\033[31m", "yellow": "\033[33m",
+    "green": "\033[32m", "cyan": "\033[36m", "bold": "\033[1m", "off": "\033[0m",
+}
+if not sys.stdout.isatty() or os.environ.get("NO_COLOR"):
+    C = dict.fromkeys(C, "")
+
+
+def paint(role, text):
+    return f"{C[role]}{text}{C['off']}"
+
+
+def visible_len(text):
+    """粗略显示宽度：CJK 算 2 格。用于对齐含中文的列。"""
+    return sum(2 if ord(ch) > 0x2E80 else 1 for ch in text)
+
+
+def pad(text, width):
+    return text + " " * max(0, width - visible_len(text))
+
+
+def load_lock():
+    try:
+        with open(LOCK) as fh:
+            return json.load(fh).get("skills", {})
+    except (OSError, ValueError):
+        return {}
+
+
+def git(repo, *args):
+    try:
+        out = subprocess.run(
+            ["git", "-C", repo, *args],
+            capture_output=True, text=True, timeout=10, check=False,
+        )
+        return out.stdout.strip() if out.returncode == 0 else None
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
+def classify(name, managed):
+    """返回 (层名, 归档位置或 None)。形态即层级，无需外部清单。"""
+    path = os.path.join(HUB, name)
+    if os.path.islink(path):
+        real = os.path.realpath(path)
+        for label, root in ARCHIVES:
+            if real.startswith(os.path.realpath(root)):
+                return f"② 私密" if label == "私密" else "③ 公开", real
+        return "③ 外部", real
+    if name in managed:
+        return "① 第三方", None
+    return "待归类", None
+
+
+def main():
+    if not os.path.isdir(HUB):
+        print(paint("red", f"hub 不存在: {HUB}"))
+        return 1
+
+    managed = load_lock()
+    names = sorted(d for d in os.listdir(HUB) if not d.startswith("."))
+    rows, problems = [], []
+
+    # 消费端是否仍整目录链向 hub
+    hub_real = os.path.realpath(HUB)
+    consumer_ok = {}
+    for tag, path in CONSUMERS:
+        if not os.path.exists(path):
+            consumer_ok[tag] = "缺失"
+            problems.append(f"{tag} 的 skills 目录不存在：{path}")
+        elif not os.path.islink(path):
+            consumer_ok[tag] = "已脱钩"
+            problems.append(
+                f"{tag} 的 skills 目录不再是符号链接（被某个 agent 重建成真实目录了）。"
+                f"\n    修复：rm -rf {path} && ln -s {HUB} {path}"
+            )
+        elif os.path.realpath(path) != hub_real:
+            consumer_ok[tag] = "指错"
+            problems.append(f"{tag} 指向 {os.path.realpath(path)}，不是 hub")
+        else:
+            consumer_ok[tag] = "ok"
+
+    for name in names:
+        tier, real = classify(name, managed)
+        path = os.path.join(HUB, name)
+        if not os.path.exists(path):
+            note = paint("red", "断链")
+            problems.append(f"{name}: 断链，指向 {os.readlink(path)}")
+        elif tier == "待归类":
+            note = paint("yellow", "← 需归类")
+        else:
+            note = ""
+        where = ""
+        if real:
+            where = os.path.relpath(real, HOME).replace(".agents/skills-private/skills", "私密库") \
+                .replace("Documents/Projects/skills/skills", "公开库")
+        rows.append((name, tier, where, note))
+
+    # ---- 表格
+    w_name = max([visible_len(r[0]) for r in rows] + [16]) + 2
+    w_tier = 12
+    print()
+    print(paint("bold", f"{pad('SKILL', w_name)}{pad('层级', w_tier)}归档位置"))
+    print(paint("dim", "─" * (w_name + w_tier + 34)))
+    for name, tier, where, note in rows:
+        color = {"① 第三方": "dim", "② 私密": "cyan", "③ 公开": "green"}.get(tier, "yellow")
+        print(f"{pad(name, w_name)}{paint(color, pad(tier, w_tier))}{paint('dim', pad(where, 30))}{note}")
+
+    # ---- 汇总
+    counts = {}
+    for _, tier, _, _ in rows:
+        counts[tier] = counts.get(tier, 0) + 1
+    print(paint("dim", "─" * (w_name + w_tier + 34)))
+    print("  ".join(f"{t} {n}" for t, n in sorted(counts.items())) + f"  合计 {len(rows)}")
+
+    # ---- 分发
+    print()
+    print(paint("bold", "分发"))
+    print(f"  pi   直接读 hub                      {paint('green', 'ok')}")
+    for tag, path in CONSUMERS:
+        st = consumer_ok[tag]
+        mark = paint("green", "ok") if st == "ok" else paint("red", st)
+        print(f"  {tag}   {pad(os.path.relpath(path, HOME), 34)}{mark}")
+
+    # ---- 归档
+    print()
+    print(paint("bold", "归档"))
+    for label, repo in ARCHIVES:
+        if not os.path.isdir(os.path.join(repo, ".git")):
+            print(f"  {label}  {paint('red', '不是 git 仓库')}  {repo}")
+            problems.append(f"{label}归档不是 git 仓库：{repo}")
+            continue
+        dirty = git(repo, "status", "--porcelain")
+        remote = git(repo, "remote")
+        bits = []
+        if dirty:
+            n = len(dirty.splitlines())
+            bits.append(paint("yellow", f"{n} 处未提交"))
+            problems.append(f"{label}归档有 {n} 处未提交改动：{repo}")
+        if remote:
+            ahead = git(repo, "rev-list", "--count", "@{u}..HEAD")
+            if ahead and ahead != "0":
+                bits.append(paint("yellow", f"{ahead} 个 commit 未推送"))
+                problems.append(f"{label}归档有 {ahead} 个 commit 未推送：{repo}")
+        else:
+            bits.append(paint("dim", "无远程（仅本地）"))
+        if not bits:
+            bits.append(paint("green", "clean"))
+        print(f"  {label}  {pad(os.path.relpath(repo, HOME), 34)}{'  '.join(bits)}")
+
+    # ---- 残留
+    leftovers = []
+    for _, path in CONSUMERS:
+        parent, base = os.path.dirname(path), os.path.basename(path)
+        if os.path.isdir(parent):
+            leftovers += [
+                os.path.join(parent, d) for d in os.listdir(parent)
+                if d.startswith(f"{base}.pre-hub-")
+            ]
+    if leftovers:
+        print()
+        print(paint("bold", "切换前的旧目录（确认无碍后可删）"))
+        for path in leftovers:
+            print(paint("dim", f"  {os.path.relpath(path, HOME)}"))
+
+    # ---- 问题
+    print()
+    untriaged = [r[0] for r in rows if r[1] == "待归类"]
+    if untriaged:
+        print(paint("yellow", f"待归类 {len(untriaged)} 个：") + " ".join(untriaged))
+        print(paint("dim", "  第三方手动装的 → 不用管"))
+        print(paint("dim", "  你自己写的     → 搬进归档库，hub 里换成符号链接："))
+        print(paint("dim", f"    mv {HUB}/<name> ~/.agents/skills-private/skills/"))
+        print(paint("dim", f"    ln -s ~/.agents/skills-private/skills/<name> {HUB}/<name>"))
+    if problems:
+        print()
+        print(paint("red", f"问题 {len(problems)} 项"))
+        for p in problems:
+            print(f"  · {p}")
+    elif not untriaged:
+        print(paint("green", "一切正常"))
+
+    print()
+    print(paint("dim", "第三方更新：npx skills check  →  npx skills update"))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
