@@ -219,7 +219,9 @@ def main():
         print(paint("green", "一切正常"))
 
     print()
-    print(paint("dim", "第三方更新：npx skills check  →  npx skills update"))
+    print(paint("dim", "第三方更新：npx skills update -g -y（首跑 10+ 分钟，kami 仓库大必超时，不影响其它）"))
+    print(paint("dim", "  装新的：npx skills add <repo> -g -s <name> -s <name> --agent '*' -y（-s 不支持逗号分隔）"))
+    print(paint("dim", "  删除后手动清 ~/.agents/.skill-lock.json 的孤儿条目：skills remove 不清 lock"))
     return 0
 
 
