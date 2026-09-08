@@ -13,6 +13,7 @@ are mine — opinionated, small, and written to be read rather than configured.
 | Skill | What it does |
 | --- | --- |
 | [`brief`](skills/brief) | Turns the current conversation into a shareable project brief for **human** teammates — goal, chosen route, routes rejected, key decisions, progress — published as a styled web page. The human counterpart of `handoff`. |
+| [`notion-format`](skills/notion-format) | Composes Notion pages as blocks chosen on purpose — unnumbered headings, monochrome callouts, numbers in tables — and carries the block JSON plus the API limits that fail quietly. Transport-agnostic: MCP, REST, or your own wrapper. |
 
 ## Install
 
