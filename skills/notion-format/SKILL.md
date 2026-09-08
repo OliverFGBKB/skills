@@ -36,6 +36,28 @@ Six rules. They are what separates a composed page from a dumped one.
 5. **Space CJK against latin** (中文 / 日本語 / 한국어 pages only). One space between CJK and adjacent latin letters, digits, and `$`/`%`: `用 notion CLI 把 Q3 毛利率 41.2% 写进 Notion`. Never around full-width punctuation — `硬件（Hardware）双线`, not `硬件 （Hardware） 双线`. Never inside code spans, URLs, or equations.
 6. **Read the page back after writing.** A write that returns `200` is not a page that came out right. Fetch it and look: unparsed markers, a heading rendered as literal `####`, a callout that swallowed the four blocks below it. Every mistake in this file's history was found this way and none of them raised an error.
 
+## Structure thresholds
+
+Everything above can be decided one block at a time. These three cannot — they only
+become visible once the whole page exists, which is why a page can satisfy every rule
+above and still read as a flat list of twenty headings. Check them on a full re-read.
+
+- **A heading owning fewer than two blocks loses the heading.** Merge the content into
+  the section above. A heading sitting over a single code block or a single table is a
+  label on something that already speaks for itself, and it costs a line in the outline.
+- **More than six `heading_3` under one `heading_2` means folding is overdue.** Set
+  `is_toggleable` on the ones a reader skips while following the main path — error
+  lookups, platform caveats, permission workarounds, optional routes, appendices. The
+  steps someone executes in order stay open. The test is not "is this important" but
+  "does the reader walk past it the first time through".
+- **Two tables or two code blocks in a row need a sentence between them**, stating how
+  the second differs from the first. Without it the reader has to infer the relationship,
+  and back-to-back tables get read as one table with a strange break in it.
+
+A section that grows past roughly twenty blocks is no longer a subsection. Promote it to
+`heading_2`, or split it — do not leave a `heading_3` carrying more content than the three
+sections above it combined.
+
 ## Block recipes
 
 Minimal, valid, and enough to compose any page. Every block goes in a `children` array.
@@ -129,6 +151,10 @@ Before writing:
 
 After writing — fetch the page and confirm:
 
+- Does any heading own fewer than two blocks?
+- Is any `heading_2` carrying more than six unfolded `heading_3`?
+- Does any `heading_3` hold more content than the sections around it combined?
+- Do adjacent tables or code blocks have a line of text between them?
 - No literal markers (`####`, `[!NOTE]`, `:::`) rendered as text.
 - Callouts contain what they should, and did not absorb the blocks that followed.
 - Nested lists kept their depth instead of flattening.

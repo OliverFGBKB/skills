@@ -57,6 +57,32 @@ writing a page, fetching it, and seeing something wrong that no error had
 reported: `[!TIP]` sitting in a callout as literal text, `####` printed as four
 hashes, four blocks absorbed into the callout above them.
 
+## Two kinds of rule, and only one of them survives without a number
+
+The six rules above are decidable one block at a time, and agents follow them
+well. On a 130-block technical page rewritten under these rules, 276 text spans
+came back with **zero** CJK-spacing misses, zero literal markdown, unnumbered
+headings throughout, and two callouts on the whole page.
+
+The same page still read as a flat list: twenty-one `heading_3` under three
+`heading_2`, none of them folded, one subsection carrying more content than the
+five above it combined, and two tables back to back with nothing between them.
+
+Nothing had been violated. The rule in question said *"methodology and
+definitions go in a toggleable heading"* — which is a preference, not a
+condition, and it can only be evaluated by looking at the finished page. So the
+skill now carries three thresholds with actual numbers in them:
+
+| Threshold | Action |
+| --- | --- |
+| A heading owns fewer than 2 blocks | drop the heading, merge upward |
+| More than 6 `heading_3` under one `heading_2` | fold the ones the reader walks past |
+| Two tables or two code blocks adjacent | one sentence between them |
+
+The lesson generalises past Notion: a formatting rule an agent can apply per
+block needs no number, and a structural rule that requires seeing the whole
+document needs nothing but numbers.
+
 ## The limits it encodes
 
 Verified against the live API, because the documentation does not lead with them:
