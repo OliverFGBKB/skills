@@ -14,6 +14,7 @@ are mine — opinionated, small, and written to be read rather than configured.
 | --- | --- |
 | [`brief`](skills/brief) | Turns the current conversation into a shareable project brief for **human** teammates — goal, chosen route, routes rejected, key decisions, progress — published as a styled web page. The human counterpart of `handoff`. |
 | [`notion-format`](skills/notion-format) | Composes Notion pages as blocks chosen on purpose — unnumbered headings, monochrome callouts, numbers in tables — and carries the block JSON plus the API limits that fail quietly. Transport-agnostic: MCP, REST, or your own wrapper. |
+| [`helios`](skills/helios) | Works through your Helios (Huilianyi expense system) My Approvals queue. It checks each request, contract and payment against its attachments, approves the clean ones through the detail panel, and reports the rest with field-level reasons. Needs a background browser driver such as [ego lite](https://lite.ego.app/). |
 
 ## Install
 
@@ -60,6 +61,9 @@ skill that gets used and a prompt that gets ignored:
   template — not more prose.
 - **No scripts, no dependencies.** If a skill needs to install something to
   work, it is doing too much.
+  The one exception is `helios`: approving documents in a web app needs a
+  browser driver. Its README says exactly what to install, and its scripts
+  live in `references/` as data.
 - **`disable-model-invocation: true`** on anything that produces an artifact
   the user should have asked for. These fire on `/name`, not on a hunch.
 - **`argument-hint`** wherever one argument changes the whole output. Ask
