@@ -1,8 +1,8 @@
 ---
 name: helios
-description: Review and approve the documents waiting for you in Helios (Huilianyi / 汇联易 expense system) → My Approvals. Opens every pending request, contract and payment, checks each one against its attachments, approves the clean ones, and reports the rest with reasons. Use for "/helios", "approve my Helios documents", "审批 Helios / My Approvals", or reviewing a single Helios EA / ER / PUBCA / PUKOL document.
+description: Review and approve the documents waiting for you in Helios (Huilianyi / 汇联易 expense system) → My Approvals. Opens every pending request, contract and payment, checks each one against its attachments under your personal approval policy, approves the clean ones, and reports the rest with reasons. First run walks you through installing dependencies and setting that policy. Use for "/helios", "/helios setup", "approve my Helios documents", "审批 Helios / My Approvals", or reviewing a single Helios EA / ER / PUBCA / PUKOL document.
 disable-model-invocation: true
-argument-hint: "[optional: document numbers to limit the run, or 'review only']"
+argument-hint: "[setup | review only | document numbers]"
 ---
 
 # Helios approvals
@@ -12,16 +12,19 @@ You review the approver's **My Approvals** queue one document at a time:
 - **Clean** → approve it.
 - **Anything wrong** → leave it untouched, and list it in the report at the end.
 
-Argument handling: no argument means the whole queue. Document numbers limit the run to those. `review only` runs steps 1–2 and the report, with no approvals.
+How a document counts as clean is set by the approver's **policy**: a file of `key: value` lines at `~/.config/helios/policy.md`, or at the path in `$HELIOS_POLICY` when that is set. `policy.<key>` below means a value from that file.
 
-Before anything else, check that `<HELIOS_HOST>` (in the reference) and the threshold placeholders (end of this file) are filled in. If any `<…>` placeholder is left, stop and ask the user for the value.
+## Route the run
 
-Interfaces, selectors and ready-to-run scripts live in [references/helios-ui.md](references/helios-ui.md). Read it before the first browser call.
+| Situation | Do |
+|---|---|
+| Argument is `setup`, the policy file is missing, or it still contains a `<…>` placeholder | Follow [references/setup.md](references/setup.md) to the end, then stop. Approve nothing in a setup run. |
+| A dependency check from setup fails now (driver or `pdftotext` missing) | Run only the dependency part of setup. |
+| Argument is `review only`, or `policy.approve_mode: review_only` | Steps 1–3 and 6. Approve nothing. |
+| Argument is document numbers | All steps, limited to those documents. |
+| No argument | All steps, whole queue. |
 
-## Requirements
-
-- **A background browser driver.** It must drive a real Chromium that already holds the approver's Helios login, through CDP or an extension, without taking the OS mouse or keyboard focus. The default is ego lite (`ego-browser`). Any harness browser-use tool with the same properties works; [the README](README.md#browser-driver) lists what it needs.
-- **A local PDF text extractor.** Use `pdftotext` (poppler), with an OCR fallback for scanned PDFs. Attachments carry bank details, so read them on this machine only. Never upload them.
+Read the policy file before the first browser call. Interfaces, selectors and ready-to-run scripts are in [references/helios-ui.md](references/helios-ui.md); read it before the first browser call too.
 
 ## Guardrails
 
@@ -29,14 +32,15 @@ Interfaces, selectors and ready-to-run scripts live in [references/helios-ui.md]
 - **Problem documents stay exactly as they are.** No Reject, Return, comment, edit or message. The reasons go only into the report.
 - **Login or 2FA screen** → stop and ask the user to sign in. Never type credentials.
 - **The report contains no bank account numbers, IBANs or credentials.** If a document's text holds a plaintext password, write only "reason field contains plaintext login credentials — rotate and scrub".
-- **Downloads** go to a per-document folder under the session scratch directory.
+- **Attachments stay on this machine.** Download them to a per-document folder under the session scratch directory and read them locally.
+- **The browser runs in the background.** Use only a driver that leaves the user's mouse and keyboard alone; setup lists the supported ones.
 
 ## Visible-only
 
 Base every finding on what the document page **actually shows**.
 
 - API JSON is a fast way to locate data. Each field a finding cites must also appear in the detail panel's rendered text.
-- Fields hidden by form linkage rules count as absent. Don't cite their stale values, and don't flag them as "missing". Example: on the KOL request form, the fee-threshold flag = NO (`<KOL_FLAG_USD>`) hides Audience, Reasons for Collab, Collaboration Breakdown, Usage Rights, Expected Live Month and Campaign.
+- Fields hidden by form linkage rules count as absent. Don't cite their stale values, and don't flag them as "missing". Example: on the KOL request form, the fee-threshold flag (`policy.kol_flag_usd`) set to NO hides Audience, Reasons for Collab, Collaboration Breakdown, Usage Rights, Expected Live Month and Campaign.
 
 ## Steps
 
@@ -45,21 +49,23 @@ Base every finding on what the document page **actually shows**.
 2. **Capture.** For every document, save the detail panel text, its API JSON, its invoice JSON, and every attachment.
    - Done when every document has a panel text file, and every contract or payment has its attachments on disk. Attachments can fail to download because of an expired signed URL. Retry the other URL variants until each file is on disk.
 3. **Review.** Apply the [Rules](#rules) by document type. Open every attachment; never judge a file by its name.
-   - For a carry-over, compare the panel text and the attachment hashes with the earlier run. If both are unchanged, reuse the earlier verdict and say so in the report.
+   - Carry-overs, with `policy.carryover: reuse`: compare the panel text and the attachment hashes with the earlier run. If both are unchanged, reuse the earlier verdict and say so. With `re-review`, review them again from scratch.
    - Done when every document is either **clean** or **problem + reasons**, and every reason points at a visible field or an attachment line.
-4. **Approve the clean ones.** For each one, open its detail panel and confirm the panel's `Document No.` is the target. Then click the panel's Approve and confirm with OK.
+4. **Approve the clean ones.** With `policy.approve_mode: confirm_batch`, first show the clean list and wait for a yes. For each one, open its detail panel and confirm the panel's `Document No.` is the target. Then click the panel's Approve and confirm with OK.
    - Never use the row-level quick Approve.
    - Skip, and record, any document whose panel number does not match or that has left the queue.
 5. **Verify.** Reload the list. Every approved document must be gone, and the remaining list must equal the problem list.
    - Documents that arrived during the run are out of scope. Report them, and ask whether to run again.
-6. **Report** (in the user's language, conclusion first):
+6. **Report** in `policy.report_language`, conclusion first:
    - One line: how many were pending, approved, and left.
    - A table of approved documents: number, applicant, one-line basis.
    - A table of problem documents: number, applicant, reasons. Each reason names the field and the attachment that disagree.
    - Skipped documents and new arrivals, if any.
-   - Any rule this run suggests changing, as an offer. Don't change the skill silently.
+   - Any policy value this run suggests changing, as an offer. Change the policy file only when the user says yes.
 
 ## Rules
+
+A rule whose policy value is `off` is skipped.
 
 ### Requests (EA: KOL collab, sales & marketing expense)
 
@@ -67,9 +73,9 @@ Judge whether the request itself makes sense. A request does not need attachment
 
 - Creator type, market, content and purpose agree with each other. For example, the audience geography fits the market.
 - The fee fits the data: followers, median views, estimated views, CPV.
-  - Flag estimated views clearly above median views.
-  - Flag CPV far from the batch reference. The reference is the median CPV of comparable requests in the same batch; state it in the report. Treat about 3× or more as far.
-- The currency, the "in USD" amount field, and the fee-threshold flag (`<KOL_FLAG_USD>`) agree with each other.
+  - With `policy.views_above_median: flag`, flag estimated views clearly above median views.
+  - Flag CPV at `policy.cpv_outlier_multiple` × the batch reference or more. The reference is the median CPV of comparable requests in the same batch; state it in the report.
+- The currency, the "in USD" amount field, and the fee-threshold flag (`policy.kol_flag_usd`) agree with each other.
 - Flag one creator with two requests in the same period, whether a duplicate or a split to stay under a threshold.
 
 ### Contracts (PUBCA)
@@ -77,12 +83,16 @@ Judge whether the request itself makes sense. A request does not need attachment
 Apply the request checks, then check the contract text in the attachment:
 
 - **Entity**: our party on the contract = the document's signing entity.
-- **Amount and currency**: the contract amount and payment terms (installments, amounts, dates) = Planned Payment Info. When the currencies differ, compute the implied FX rate and flag it if it is off-market.
+- **Amount and currency**: the contract amount and payment terms (installments, amounts, dates) = Planned Payment Info. When the currencies differ, compute the implied FX rate. Flag it if it is more than `policy.fx_tolerance_pct`% off market.
 - **Counterparty**: = Counterparty Info. An influencer contract may use Payee-Influencer, but the payee account must belong to that counterparty.
 - **Payee**: = the party the reason text says gets paid. For example, a reason that says "paid via Impact" needs Impact as payee.
 
 Also flag:
-- **Unsigned attachment.** If the form says Docusign will be initiated after approval, label it "unsigned — Docusign pending", so the user can decide that group in one go.
+- **Unsigned attachment.** If the form says Docusign will be initiated after approval, `policy.unsigned_docusign` decides:
+  - `flag` → flag it as "unsigned — Docusign pending".
+  - `allow` → the missing signature alone doesn't block approval.
+
+  An unsigned contract without Docusign is always flagged.
 - **Our party undecided, or placeholders unfilled** (e.g. `XXXX`, `\s1\`).
 - **Fees in the text outside Planned Payment**: commission, CPA, bonus.
 - **A term or exposure period that differs from the reason text.**
@@ -97,29 +107,23 @@ Match the invoice against the payment data:
 - **Bank**: account name, account number, SWIFT/IBAN. Check that the payee account appears on the invoice or on the vendor master. Never print it.
 - **Expense type, reason and invoice description** describe the same service and period.
 - **Allocation** fits the business. A US campaign isn't allocated to EU.
-- **Linkage**: the payment links the request or contract the amount requires (see thresholds).
-- **Duplicates**: compare the invoice number with earlier documents for the same vendor, including drafts. Compare the contract's paid amount with this payment.
+- **Linkage**: a payment of `policy.link_any_usd` or more links a request or contract. Above `policy.link_contract_usd` it links a contract.
+- **Duplicates**: compare the invoice number with earlier documents for the same vendor, including drafts, over the last `policy.duplicate_lookback_months` months. Compare the contract's paid amount with this payment.
+- **Entity and currency**: they match exactly across the contract, invoice and payment.
 
 ### Across documents
 
-- **Split approvals.** Flag several documents to the same vendor on the same day where each sits below an approval threshold and their total is above it.
+- **Split approvals.** Flag documents to one vendor within `policy.split_window_days` days where each is below `policy.ceo_approval_usd` and their total is above it. A value of 0 means the same day.
 - **A resubmission of a document flagged earlier.** Say which earlier problems are fixed and which remain.
+
+### Minor issues
+
+Examples: a wrong category, inconsistent checkboxes, or an invoice description that is narrower than the contract while the amount still matches. `policy.minor_issues` decides:
+- `flag` → treat the document as a problem.
+- `approve_and_note` → approve it, and list the issue under the approved row.
 
 ### When unsure
 
-Flag it and let the user decide. That covers:
-- Wrong category and inconsistent checkboxes.
+Always flag, whatever the policy says:
 - An unusually large amount that is internally consistent.
 - Document types these rules don't cover.
-
-## Thresholds
-
-These are company policy. Replace each placeholder with your own value before the first run:
-
-| Rule | Value |
-|---|---|
-| A payment must link a request or contract | ≥ `<LINK_ANY_USD>` |
-| A payment must link a contract | > `<LINK_CONTRACT_USD>` |
-| A contract or payment needs CEO approval | > `<CEO_APPROVAL_USD>` |
-| KOL fee-threshold flag on the request form | `<KOL_FLAG_USD>` |
-| Contract and payment entity and currency | must match exactly |

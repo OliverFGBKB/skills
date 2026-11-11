@@ -38,9 +38,11 @@ The skill needs a browser it can drive **in the background**. That means a real 
 
 ### Everything else
 
+`/helios setup` installs all of these for your OS:
+
 | Need | Default | Alternatives |
 |---|---|---|
-| PDF text | `pdftotext` (`brew install poppler`) | Any local extractor. Add OCR for scans: `ocrmypdf`, MinerU |
+| PDF text | `pdftotext` (poppler) | Any local extractor. Add OCR for scans: `ocrmypdf` + tesseract, MinerU |
 | Signature check | `pdftoppm` (poppler) + an agent that can view images | — |
 | `.docx` text | `textutil` (macOS built-in) | `pandoc` |
 | Downloads | `curl`, `python3` | — |
@@ -55,31 +57,49 @@ git clone https://github.com/OliverFGBKB/skills.git
 cp -r skills/skills/helios ~/.claude/skills/
 ```
 
-Fill in the placeholders first. The agent stops if any are left:
+Restart the session, then run setup once:
 
 ```bash
-grep -rn '<[A-Z_]*>' ~/.claude/skills/helios
+/helios setup
 ```
 
-Then restart the session, log in to Helios once in the driver's browser, then:
+Setup is a guided checklist. Each step offers clickable choices, and the agent installs whatever you pick:
+
+1. **Dependency checklist.** It detects your OS and checks each dependency, marking it ✓ or ✗.
+2. **Browser driver.** Pick ego lite (recommended), Playwright MCP in extension mode, Chrome DevTools MCP, or a CDP tool your harness already has. Each option comes with its link, and the agent installs it. You only do the parts a human must do: an installer window, the app's onboarding, logging in to Helios.
+3. **Command-line tools.** poppler, OCR (ocrmypdf + tesseract with Chinese), pandoc and python, using Homebrew on macOS, winget on Windows, or apt on Debian/Ubuntu. Every row is re-checked until it shows ✓.
+4. **Your approval policy.** About 15 questions in four rounds: how to handle clean documents, your company's thresholds, how strict to be, and cross-document checks. The answers become `~/.config/helios/policy.md`. It lives outside the skill folder, so updating the skill never overwrites it.
+
+Then use it:
 
 ```bash
-/helios
-/helios review only
-/helios ER00000001 PUBCA0000000001
+/helios review only                    # dry run: review and report, approve nothing
+/helios                                # whole queue
+/helios ER00000001 PUBCA0000000001     # only these documents
 ```
 
 It runs only on `/helios` (`disable-model-invocation: true`), because it approves documents. Nothing should approve on a hunch.
 
-## Adapting it to your tenant
+## Your policy
 
-- **Host.** `references/helios-ui.md` uses `<HELIOS_HOST>`. Replace it with your tenant's console host.
-- **Thresholds.** The table at the end of `SKILL.md` has placeholders (`<LINK_ANY_USD>`, `<LINK_CONTRACT_USD>`, `<CEO_APPROVAL_USD>`, `<KOL_FLAG_USD>`). Fill them in with your company's policy; they are not Helios behaviour.
+| Group | Keys | Decides |
+|---|---|---|
+| Run | `host`, `approve_mode`, `report_language`, `carryover`, `minor_issues` | Your tenant; auto-approve, confirm first, or review only; whether unchanged carry-overs are re-reviewed; whether minor issues block approval |
+| Company thresholds | `link_any_usd`, `link_contract_usd`, `ceo_approval_usd`, `kol_flag_usd` | When a payment must link a request or contract, the top-level approval line, and the KOL form flag |
+| Strictness | `cpv_outlier_multiple`, `views_above_median`, `unsigned_docusign`, `fx_tolerance_pct` | How far off a creator's CPV may be, whether a Docusign-pending contract may pass, the FX tolerance |
+| Cross-document | `split_window_days`, `duplicate_lookback_months` | The window for spotting a split, and how far back to look for duplicate invoices |
+
+Change a value by editing the file, or by re-running `/helios setup`, which asks only about what you want to change. After each run, the report may suggest a policy change. It is applied only when you say yes.
+
+The skill ships with no company values. The template in `references/policy-template.md` holds only placeholders.
+
+## Adapting it to another tenant
+
 - **Form names.** The rules key on document prefixes (EA / ER / PUBCA / PUKOL) and English form labels. Another tenant's custom forms may label fields differently.
+- **Browser driver.** The reference scripts are written for ego-browser. `references/helios-ui.md` ends with a porting table for Playwright-style drivers.
 
 ## Known limits
 
 - **CPV has no absolute standard.** The skill compares each document with the median of the same batch. A small or skewed batch makes a weak reference, so the report states the reference it used.
-- **Unsigned contracts are flagged even when Docusign follows approval.** They are labelled "Docusign pending" so you can clear them as a group. If your process always signs after approval, relax that rule.
-- **Duplicate detection is only as wide as the history search.** That search allows a 12-month window per request. An invoice paid outside Helios is invisible to it.
+- **Duplicate detection is only as wide as the history search.** Each request to that search covers at most 12 months, so longer lookbacks take several requests. An invoice paid outside Helios is invisible to it.
 - **It is slow on purpose.** It spends about 10 seconds per document opening the drawer, plus attachment downloads, and it opens every attachment.

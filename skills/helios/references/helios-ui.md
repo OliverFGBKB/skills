@@ -1,6 +1,6 @@
 # Helios UI and API reference
 
-Host: `https://<HELIOS_HOST>`, the console host your tenant signs in to. Replace `<HELIOS_HOST>` everywhere in this file before the first run. The My Approvals list is at `/main/approve`.
+Host: `https://<HELIOS_HOST>`, where `<HELIOS_HOST>` is `policy.host` from the approver's policy file. Substitute it into every script below. The My Approvals list is at `/main/approve`.
 
 The session is the browser's logged-in cookie plus a bearer token sent in request headers. Never store the token anywhere. Capture it live: enable `Network`, load the list page, and reuse the headers of the page's own `pendingApproval` request for every call made through `page.fetch`.
 

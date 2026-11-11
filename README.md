@@ -14,7 +14,7 @@ are mine — opinionated, small, and written to be read rather than configured.
 | --- | --- |
 | [`brief`](skills/brief) | Turns the current conversation into a shareable project brief for **human** teammates — goal, chosen route, routes rejected, key decisions, progress — published as a styled web page. The human counterpart of `handoff`. |
 | [`notion-format`](skills/notion-format) | Composes Notion pages as blocks chosen on purpose — unnumbered headings, monochrome callouts, numbers in tables — and carries the block JSON plus the API limits that fail quietly. Transport-agnostic: MCP, REST, or your own wrapper. |
-| [`helios`](skills/helios) | Works through your Helios (Huilianyi expense system) My Approvals queue. It checks each request, contract and payment against its attachments, approves the clean ones through the detail panel, and reports the rest with field-level reasons. Needs a background browser driver such as [ego lite](https://lite.ego.app/). |
+| [`helios`](skills/helios) | Works through your Helios (Huilianyi expense system) My Approvals queue. It checks each request, contract and payment against its attachments under your own approval policy, approves the clean ones through the detail panel, and reports the rest with field-level reasons. `/helios setup` installs the dependencies for your OS, including a background browser driver such as [ego lite](https://lite.ego.app/), and then asks the questions that build your policy. |
 
 ## Install
 
