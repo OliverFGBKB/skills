@@ -12,11 +12,39 @@ Setup has two parts, and they run in order. **Part 1** installs and checks every
 - **Run the command yourself after the approver picks an option.** Before running a package-manager command, confirm the package exists, e.g. `brew info X`, `winget search X` or `apt-cache policy X`. Never guess a package id.
 - **Hand over what needs a human.** A GUI installer, an app's first-run onboarding, or a `sudo` password goes to the approver as a one-line action, e.g. "type `! sudo apt install …`". Then wait for them to confirm.
 
+## Windows desktop agents
+
+On Windows, setup usually runs inside a desktop app: Claude Code in the Claude desktop app, or Codex in the ChatGPT desktop app. The agent's shell there is PowerShell or Git Bash. Settle these points before the checklist, because each one makes a later check fail for a reason that has nothing to do with the dependency.
+
+- **winget may be missing.** Run `winget --version`. If it fails, **Ask** which route to take:
+  - *App Installer from Microsoft Store (Recommended)*: link the approver to https://apps.microsoft.com/detail/9NBLGGH4NNS1.
+  - *winget-cli release*: https://github.com/microsoft/winget-cli/releases. The approver installs the `.msixbundle`.
+  - *Scoop*: https://scoop.sh, a user-level install that needs no admin rights.
+  - *Direct installers*: one link per tool, taken from the tool table below.
+
+  Corporate machines often block the Store. In that case, offer Scoop or the direct installers first.
+- **Install without prompts.** Add `--accept-package-agreements --accept-source-agreements --silent` to every `winget install`, and `--scope user` where the package supports it. A machine-scope install raises a UAC prompt that only the approver can click. Say so before running it, then wait.
+- **The shell won't see new tools until PATH is refreshed.** The agent's shell keeps the PATH it started with. After each install, reload PATH in the same shell before re-checking:
+  ```powershell
+  $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')
+  ```
+  If the check still fails, the approver must fully quit and reopen the desktop app.
+- **Portable packages can leave no command on PATH.** Poppler is one of them. Locate the binary, e.g. `Get-ChildItem $env:LOCALAPPDATA\Microsoft\WinGet\Packages -Recurse -Filter pdftotext.exe`, and add its folder to the user PATH.
+- **Use `curl.exe` and `py -3`.** In Windows PowerShell 5, `curl` is an alias for `Invoke-WebRequest`. And `python3` can open the Microsoft Store stub instead of running Python.
+- **Register MCP servers through the host app**, not through a CLI that may be absent:
+  - Claude Code: `claude mcp add …`, or the desktop app's connector settings.
+  - Codex: `codex mcp add …`, or `~/.codex/config.toml`.
+
+  Check the exact syntax with the tool's `--help` first.
+- **Install the skill in the host app's own skills folder.** Claude Code uses `%USERPROFILE%\.claude\skills\helios`. Codex uses `%USERPROFILE%\.codex\skills\helios`; check that path against the Codex docs before relying on it. Restart the app after copying.
+- **ChatGPT desktop without Codex has no shell.** It can't run this skill. Tell the approver, and stop setup.
+- **No choice tool.** Codex has no `AskUserQuestion`, so use the numbered-list fallback.
+
 ## Part 1: dependencies
 
 ### Show the checklist first
 
-Detect the OS (`uname -s`, or `$env:OS` on Windows) and the CPU architecture. Run every check below, then show this table with ✓ / ✗ before installing anything:
+Detect the OS (`uname -s`, or `$env:OS` on Windows), the CPU architecture, and the host app (Claude Code, Codex, other). On Windows, go through *Windows desktop agents* above first. Run every check below, then show this table with ✓ / ✗ before installing anything:
 
 | # | Dependency | Check | Required |
 |---|---|---|---|
@@ -24,7 +52,7 @@ Detect the OS (`uname -s`, or `$env:OS` on Windows) and the CPU architecture. Ru
 | 2 | PDF text: `pdftotext`, `pdftoppm` | `pdftotext -v` | yes |
 | 3 | OCR for scanned PDFs | `ocrmypdf --version` and `tesseract --list-langs` | recommended |
 | 4 | `.docx` text | macOS: `textutil` is built in. Otherwise `pandoc -v` | recommended |
-| 5 | `curl`, `python3` | `curl --version`, `python3 --version` | yes |
+| 5 | `curl`, Python 3 | `curl --version`, `python3 --version` (Windows: `curl.exe --version`, `py -3 --version`) | yes |
 
 Then work through the ✗ rows in order. Re-run each check after its install, and move on only when it shows ✓.
 
@@ -49,12 +77,12 @@ It must drive a real Chromium that holds the approver's Helios login, through CD
 
 Use the row for this OS. Install everything that is missing in one command, after one **Ask**: "Install these missing tools now?", with the options *Install all (Recommended)* / *Pick per tool* / *Skip optional ones*.
 
-| Dependency | macOS (Homebrew) | Windows (winget, then pip) | Debian / Ubuntu |
+| Dependency | macOS (Homebrew) | Windows (winget; see *Windows desktop agents* if it is missing) | Debian / Ubuntu |
 |---|---|---|---|
-| poppler | `brew install poppler` | `winget install oschwartz10612.Poppler`, then add its `bin` to PATH | `sudo apt install poppler-utils` |
-| OCR | `brew install ocrmypdf tesseract-lang` | `winget install UB-Mannheim.TesseractOCR` + `winget install ArtifexSoftware.GhostScript` + `pip install ocrmypdf` | `sudo apt install ocrmypdf tesseract-ocr-chi-sim` |
-| pandoc | not needed: `textutil` is built in | `winget install JohnMacFarlane.Pandoc` | `sudo apt install pandoc` |
-| curl, python3 | built in; `brew install python` if missing | `winget install Python.Python.3.12` (curl ships with Windows 10+) | `sudo apt install curl python3` |
+| poppler | `brew install poppler` | `winget install oschwartz10612.Poppler` (portable: add its `bin` to PATH, see above). Scoop: `scoop install poppler` | `sudo apt install poppler-utils` |
+| OCR | `brew install ocrmypdf tesseract-lang` | `winget install UB-Mannheim.TesseractOCR` + `winget install ArtifexSoftware.GhostScript` + `py -3 -m pip install --user ocrmypdf`. Tick Chinese in the Tesseract language list, or add `chi_sim.traineddata` | `sudo apt install ocrmypdf tesseract-ocr-chi-sim` |
+| pandoc | not needed: `textutil` is built in | `winget install JohnMacFarlane.Pandoc`. Scoop: `scoop install pandoc` | `sudo apt install pandoc` |
+| curl, python3 | built in; `brew install python` if missing | `winget install Python.Python.3.12`. `curl.exe` ships with Windows 10 1803+ | `sudo apt install curl python3` |
 
 - **No Homebrew on macOS**: link https://brew.sh. Installing it needs the approver's password, so hand them the one-line installer from that page.
 - **Other Linux distros**: use the native package manager. Search for the same package names first.

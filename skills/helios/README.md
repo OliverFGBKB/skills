@@ -57,6 +57,8 @@ git clone https://github.com/OliverFGBKB/skills.git
 cp -r skills/skills/helios ~/.claude/skills/
 ```
 
+On Windows, copy it into the host app's skills folder: `%USERPROFILE%\.claude\skills\` for Claude Code (desktop or CLI), or `%USERPROFILE%\.codex\skills\` for Codex in the ChatGPT desktop app. The ChatGPT app without Codex has no shell and can't run this skill.
+
 Restart the session, then run setup once:
 
 ```bash
@@ -67,7 +69,7 @@ Setup is a guided checklist. Each step offers clickable choices, and the agent i
 
 1. **Dependency checklist.** It detects your OS and checks each dependency, marking it ✓ or ✗.
 2. **Browser driver.** Pick ego lite (recommended), Playwright MCP in extension mode, Chrome DevTools MCP, or a CDP tool your harness already has. Each option comes with its link, and the agent installs it. You only do the parts a human must do: an installer window, the app's onboarding, logging in to Helios.
-3. **Command-line tools.** poppler, OCR (ocrmypdf + tesseract with Chinese), pandoc and python, using Homebrew on macOS, winget on Windows, or apt on Debian/Ubuntu. Every row is re-checked until it shows ✓.
+3. **Command-line tools.** poppler, OCR (ocrmypdf + tesseract with Chinese), pandoc and python, using Homebrew on macOS, winget on Windows, or apt on Debian/Ubuntu. On Windows, setup also covers a missing winget (Store App Installer, Scoop, or direct installers), the UAC prompts, refreshing PATH so the agent's shell sees new tools, and the `curl.exe` / `py` quirks. Every row is re-checked until it shows ✓.
 4. **Your approval policy.** About 15 questions in four rounds: how to handle clean documents, your company's thresholds, how strict to be, and cross-document checks. The answers become `~/.config/helios/policy.md`. It lives outside the skill folder, so updating the skill never overwrites it.
 
 Then use it:
